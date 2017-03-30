@@ -1,0 +1,56 @@
+model{
+  for(i in 1:N){
+  	#S[i] <- max(min(S.star[i],1),0) # avoid unstable decimals
+	  #probit(S.star[i]) <- s.star[i]  # probability of being in visitability regime
+    #s.star[i] <- inprod(Z[i,], gamma[1:K])
+    #for(d in 1:D){
+    #    y.star[i,d] <- X[i,,d]%*%beta[1:J,d] + e[i,d]
+    #}
+    #e[i,1:D] ~ dmnorm(b0, invW[,])
+    for(d in 1:D){
+        Xnew[d,i] <- inprod(X[i,,d], beta[1:J,d])
+    }
+    y.star[i, 1:D] ~ dmnorm(Xnew[,i], invW[,])
+    for(d in 1:D){
+        for (i.cut in 1:n.cut){
+          probit(Q[i,i.cut,d]) <- tau.unsorted[i.cut, d] - y.star[i,d]
+        }
+    }    
+    for(d in 1:D){
+        p[i,d,1] <- max(min(Q[i,1,d],1),0)
+        p[i,d,2] <- max(min(Q[i,2,d],1),0) - max(min(Q[i,1,d],1),0)
+        p[i,d,3] <- 1 - max(min(Q[i,2,d],1),0)
+        y[i,d] ~ dcat(p[i,d,])
+    }
+    
+  }
+  for(j in 1:J){
+    for(d in 1:D){
+      beta[j,d] ~ dnorm(0,0.0001)
+    }
+  }
+  #for(k in 1:K){
+  #  gamma[k]  ~ dnorm(0,0.0001)
+  #}
+  for(d in 1:D){
+    tau.unsorted[1,d] <- 0
+    tau.unsorted[2,d] <- c[d]
+    #for(i.cut in 3:n.cut){
+    #  tau.unsorted[i.cut,d] <- tau[i.cut, d]
+    #  tau[i.cut, d] ~ dlnorm(0,0.025)
+    #}
+
+  }
+
+  invW[1:D,1:D] ~ dwish(R[,],D+1)
+  Sigma[1:D,1:D] <- inverse(invW[,])
+  for(d in 1:D){
+    vars[d] <- Sigma[d,d]
+  }
+  for(l in 1:(D-1)){
+    for(q in l:(D-1)){
+      rho[q+l-1] <- Sigma[l,q+1]/sqrt(vars[l]*vars[q+1])
+    }
+  }
+
+}
